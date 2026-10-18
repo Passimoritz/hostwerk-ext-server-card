@@ -10,11 +10,11 @@ async function load() {
   const running = list.filter((s) => s.state === 'running').length;
   document.getElementById('stamp').textContent = t('stamp', { time: new Date().toLocaleString(Hostwerk.lang === 'de' ? 'de-DE' : 'en-US') });
   Hostwerk.render('#machine', html`
-    <div class="hw-card hw-stat"><div class="hw-k">${t('cpu')}</div><div class="hw-v small-v">${m.cpu || '–'}</div><div class="hw-tiny hw-muted">${m.cores ? t('coresN', { n: m.cores }) : ''}${m.avgCpu != null ? ` · ${t('load', { n: m.avgCpu })}` : ''}</div></div>
-    <div class="hw-card hw-stat"><div class="hw-k">${t('ram')}</div><div class="hw-v">${m.ramGB ? `${m.ramGB} GB` : '–'}</div><div class="hw-tiny hw-muted">${m.ramUsedPct != null ? t('usedPct', { n: m.ramUsedPct }) : ''}</div></div>
-    <div class="hw-card hw-stat"><div class="hw-k">${t('uptime')}</div><div class="hw-v">${m.uptimeMs ? Hostwerk.fmt.duration(m.uptimeMs) : '–'}</div></div>
-    <div class="hw-card hw-stat"><div class="hw-k">${t('services')}</div><div class="hw-v">${running} / ${list.length}</div><div class="hw-tiny hw-muted">${t('running')}</div></div>`);
-  Hostwerk.render('#services', groups.length ? html`${groups.map((g) => html`<div class="hw-card"><h3 class="hw-h3">${t('kind.' + g.kind)}</h3><table class="hw-table"><tbody>${g.items.map((s) => html`<tr><td><span class="hw-dot ${s.state === 'running' ? 'hw-ok' : s.state === 'error' ? 'hw-err' : ''}"></span> ${s.name}</td><td class="hw-muted">${t('state.' + s.state)}</td><td class="hw-mono">${s.port || ''}</td><td class="hw-ellipsis">${s.url || ''}</td></tr>`)}</tbody></table></div>`)}` : html`<div class="hw-empty">${t('empty')}</div>`);
+    <div class="card card-pad stat"><div class="k">${t('cpu')}</div><div class="v small-v">${m.cpu || '–'}</div><div class="tiny muted">${m.cores ? t('coresN', { n: m.cores }) : ''}${m.avgCpu != null ? ` · ${t('load', { n: m.avgCpu })}` : ''}</div></div>
+    <div class="card card-pad stat"><div class="k">${t('ram')}</div><div class="v">${m.ramGB ? `${m.ramGB} GB` : '–'}</div><div class="tiny muted">${m.ramUsedPct != null ? t('usedPct', { n: m.ramUsedPct }) : ''}</div></div>
+    <div class="card card-pad stat"><div class="k">${t('uptime')}</div><div class="v">${m.uptimeMs ? Hostwerk.fmt.duration(m.uptimeMs) : '–'}</div></div>
+    <div class="card card-pad stat"><div class="k">${t('services')}</div><div class="v">${running} / ${list.length}</div><div class="tiny muted">${t('running')}</div></div>`);
+  Hostwerk.render('#services', groups.length ? html`${groups.map((g) => html`<div class="card card-pad"><h3 class="card-title" style="margin:0 0 8px;font-size:14px">${t('kind.' + g.kind)}</h3><table class="table"><tbody>${g.items.map((s) => html`<tr><td><span class="dot ${s.state === 'running' ? 'ok' : s.state === 'error' ? 'err' : ''}"></span> ${s.name}</td><td class="muted">${t('state.' + s.state)}</td><td class="mono">${s.port || ''}</td><td class="ellipsis">${s.url || ''}</td></tr>`)}</tbody></table></div>`)}` : html`<div class="empty">${t('empty')}</div>`);
 }
 document.getElementById('copy').addEventListener('click', async () => {
   if (!last) return;
