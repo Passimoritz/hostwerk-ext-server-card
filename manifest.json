@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Passimoritz/hostwerk-public/main/sdk/manifest.schema.json",
+  "id": "server-card",
+  "color": "#6366f1",
+  "name": {
+    "de": "Server-Steckbrief",
+    "en": "Server profile"
+  },
+  "description": {
+    "de": "Alles Wichtige über diesen PC und seine Dienste auf einer Seite – Prozessor, Speicher, Laufzeit, Dienste mit Ports und Adressen. Zum Drucken oder als Text kopieren.",
+    "en": "Everything important about this PC and its services on one page – processor, memory, uptime, services with ports and addresses. Print it or copy it as text."
+  },
+  "permissions": [
+    "read:system",
+    "read:services"
+  ],
+  "page": {
+    "title": {
+      "de": "Steckbrief",
+      "en": "Server profile"
+    },
+    "icon": "server",
+    "file": "page/index.html"
+  },
+  "version": "1.0.0",
+  "author": "Hostwerk",
+  "homepage": "https://github.com/Passimoritz/hostwerk-ext-server-card",
+  "license": "MIT",
+  "icon": "icon.svg",
+  "hostwerk": ">=2.9.0"
+}
