@@ -1,3 +1,5 @@
+![Server-Steckbrief](banner.svg)
+
 # Server-Steckbrief
 
 Alles Wichtige über diesen PC und seine Dienste auf einer Seite – Prozessor, Speicher, Laufzeit, Dienste mit Ports und Adressen. Zum Drucken oder als Text kopieren.

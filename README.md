@@ -1,3 +1,5 @@
+![Server profile](banner.svg)
+
 # Server profile
 
 Everything important about this PC and its services on one page – processor, memory, uptime, services with ports and addresses. Print it or copy it as text.
