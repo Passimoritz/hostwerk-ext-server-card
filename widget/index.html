@@ -4,13 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/ext-sdk.js"></script>
+  <style>
+    .head { display: flex; align-items: center; gap: var(--sp-3, 12px); }
+    .ring { --p: 0; flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+      background: conic-gradient(var(--ring, var(--ok)) calc(var(--p) * 1%), var(--surface-3, var(--line-2)) 0); }
+    .ring.fair { --ring: var(--warn); } .ring.poor { --ring: var(--err); } .ring.unknown { --ring: var(--muted); }
+    .ring > b { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-size: var(--fs-md, 14px); font-variant-numeric: tabular-nums; }
+    .bars { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: var(--sp-1, 4px) var(--sp-2, 8px); align-items: center; margin-top: var(--sp-3, 12px); font-size: var(--fs-xs, 12px); color: var(--muted); }
+    .meter { height: 6px; border-radius: var(--r-pill, 999px); background: var(--surface-3, var(--line-2)); overflow: hidden; }
+    .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .meter.warn > span { background: var(--warn); } .meter.err > span { background: var(--err); }
+  </style>
 </head>
 <body>
-  <!-- Kachel: laufende Dienste, Auslastung und Speicher – ein Klick öffnet den ganzen Steckbrief -->
+  <!-- Kachel: Zustand als Punktzahl, laufende Dienste, CPU und Arbeitsspeicher – ein Klick öffnet den Steckbrief unter System -->
   <div class="stat">
     <div class="k" data-i18n="widgetTitle"></div>
-    <div class="v" id="v" aria-live="polite">–</div>
-    <div class="s" id="sub"></div>
+    <div class="head">
+      <div class="ring unknown" id="ring" role="img" aria-label="–"><b id="score">–</b></div>
+      <div>
+        <div class="v" id="v" aria-live="polite">–</div>
+        <div class="s" id="sub"></div>
+      </div>
+    </div>
+    <div class="bars" id="bars" hidden></div>
     <div class="row-tight" style="margin-top: var(--sp-2, 8px)">
       <button type="button" class="btn xs" id="retry" hidden data-i18n="retry">Try again</button>
       <button type="button" class="btn xs ghost" id="open" data-i18n="widgetOpen">Open profile</button>
@@ -18,22 +35,40 @@
   </div>
   <script src="../page/lib.js"></script>
   <script>
+    const { html, t } = Hostwerk;
+    const C = ServerCard;
+    let extras = { at: 0 }; // Zertifikate, Laufwerk, Sicherheit, Ports – für die Punktzahl, höchstens alle 5 Minuten
+    const meter = (n) => html`<div class="meter ${n >= 90 ? 'err' : n >= 80 ? 'warn' : ''}" aria-hidden="true"><span style="width: ${Math.max(2, n)}%"></span></div>`;
     async function load() {
-      const v = document.getElementById('v'), sub = document.getElementById('sub'), retry = document.getElementById('retry');
+      const v = document.getElementById('v'), sub = document.getElementById('sub'), retry = document.getElementById('retry'), ring = document.getElementById('ring');
       try {
         const [res, o] = await Promise.all([Hostwerk.get('/system/resources'), Hostwerk.get('/overview')]);
-        const x = ServerCard.tile(ServerCard.fromOverview(o), ServerCard.machine(res));
+        if (Date.now() - extras.at > 300000) {
+          const [certs, du, security, ports] = await Promise.all(['/live/certs', '/system/disk-usage', '/live/security', '/system/ports'].map((p) => Hostwerk.get(p).catch(() => null)));
+          extras = { at: Date.now(), certs, du, security, ports };
+        }
+        const list = C.fromOverview(o); const m = C.machine(res);
+        const card = { machine: m, groups: C.services(list), certs: C.certs(extras.certs), disk: C.disk(extras.du), security: C.security(extras.security), ports: C.ports(extras.ports), down: (o.live && o.live.down) || [] };
+        const x = C.tile(list, m, C.health(card));
         v.textContent = `${Hostwerk.fmt.number(x.up)} / ${Hostwerk.fmt.number(x.all)}`;
-        sub.textContent = [Hostwerk.t('widgetSub', { up: x.up, all: x.all }), x.cpu != null ? Hostwerk.t('load', { n: x.cpu }) : '', x.ram != null ? Hostwerk.t('usedPct', { n: x.ram }) : ''].filter(Boolean).join(' · ');
+        sub.textContent = t('widgetSub', { up: x.up, all: x.all });
+        document.getElementById('score').textContent = x.score;
+        ring.className = `ring ${x.grade === 'good' ? '' : x.grade}`;
+        ring.style.setProperty('--p', x.score);
+        ring.setAttribute('aria-label', t('scoreAria', { n: x.score }));
+        const bars = document.getElementById('bars');
+        Hostwerk.render(bars, html`${x.cpu != null ? html`<span>${t('cpuShort')}</span>${meter(x.cpu)}<span>${x.cpu} %</span>` : ''}${x.ram != null ? html`<span>${t('ramShort')}</span>${meter(x.ram)}<span>${x.ram} %</span>` : ''}`);
+        bars.hidden = x.cpu == null && x.ram == null;
         retry.hidden = true;
       } catch {
         v.textContent = '–';
-        sub.textContent = Hostwerk.t('widgetFailed');
+        sub.textContent = t('widgetFailed');
         retry.hidden = false;
       }
     }
     document.getElementById('retry').addEventListener('click', load);
-    document.getElementById('open').addEventListener('click', () => Hostwerk.navigate('/ext/server-card'));
+    // Der Steckbrief ist ein Reiter unter System (contributes.tabs, area:system)
+    document.getElementById('open').addEventListener('click', () => Hostwerk.navigate('/system/x-server-card-profile'));
     // Alle 30 s nachladen – nicht, solange die Übersicht verborgen ist
     setInterval(() => { if (!document.hidden) load(); }, 30000);
     Hostwerk.ready().then(() => { load(); Hostwerk.on('service', load); Hostwerk.on('lang', load); });

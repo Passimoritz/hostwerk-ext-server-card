@@ -5,28 +5,113 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/ext-sdk.js"></script>
   <style>
-    /* Größen aus Hostwerks Design-Skala (mit Rückfall für ältere Hostwerk-Versionen) */
-    .machine { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--sp-3, 12px); margin: var(--sp-3, 12px) 0 var(--sp-5, 20px); }
-    .small-v { font-size: var(--fs-md, 14px); line-height: 1.3; }
-    .svc { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: var(--sp-3, 12px); margin-bottom: var(--sp-3, 12px); }
-    .group-title { margin: 0 0 var(--sp-2, 8px); font-size: var(--fs-md, 14px); }
-    .share { display: inline-flex; align-items: center; gap: var(--sp-2, 8px); min-height: 24px; }
-    @media print { .no-print { display: none; } .card { break-inside: avoid; } }
+    /* Nur Stufen aus Hostwerks Design-Skala und Farb-Tokens (mit Rückfall für ältere Hostwerk-Versionen) */
+    .top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2, 8px) var(--sp-3, 12px); margin-bottom: var(--sp-4, 16px); }
+    .top .who { display: flex; align-items: center; gap: var(--sp-2, 8px); min-width: 0; flex: 1; }
+    .who-name { font-size: var(--fs-lg, 16px); font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+    .name-btn { min-height: 24px; }
+    .name-input { max-width: 280px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: var(--sp-3, 12px); margin-bottom: var(--sp-4, 16px); }
+    .kpi { min-width: 0; display: flex; flex-direction: column; }
+    .kpi .v { font-size: var(--fs-xl, 20px); overflow-wrap: anywhere; }
+    /* Lange Werte (Prozessorname, Adressen): höchstens zwei Zeilen, ganzer Wert im Tooltip */
+    .kpi .v.long { font-size: var(--fs-md, 14px); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .kpi .s { margin-top: auto; padding-top: var(--sp-1, 4px); overflow-wrap: anywhere; }
+    .meter { height: 6px; border-radius: var(--r-pill, 999px); background: var(--surface-3, var(--line-2)); overflow: hidden; margin-top: var(--sp-2, 8px); }
+    .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .meter.warn > span { background: var(--warn); }
+    .meter.err > span { background: var(--err); }
+    .layout { display: grid; gap: var(--sp-4, 16px); grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
+    .col { display: flex; flex-direction: column; gap: var(--sp-4, 16px); min-width: 0; }
+    .card-head { display: flex; align-items: center; gap: var(--sp-2, 8px); }
+    .card-head h3 { margin: 0; flex: 1; }
+    .scroll-x { overflow-x: auto; }
+    .svc-table td { vertical-align: middle; }
+    .svc-table .cell-name { display: flex; align-items: center; gap: var(--sp-2, 8px); min-width: 0; }
+    .svc-table .addr { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .svc-table tr[data-svc] { cursor: context-menu; }
+    .open-btn { background: none; border: 0; padding: 0; color: var(--text); font: inherit; cursor: pointer; text-align: left; min-height: 24px; overflow-wrap: anywhere; }
+    .open-btn:hover { color: var(--accent-text); text-decoration: underline; }
+    .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sp-2, 8px) var(--sp-3, 12px); margin: 0; font-size: var(--fs-sm, 13px); }
+    .facts dt { color: var(--muted); }
+    .facts dd { margin: 0; overflow-wrap: anywhere; }
+    .chips { display: flex; flex-wrap: wrap; gap: var(--sp-1, 4px); }
+    .score { display: flex; align-items: center; gap: var(--sp-4, 16px); }
+    .ring { --p: 0; flex: none; width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+      background: conic-gradient(var(--ring, var(--ok)) calc(var(--p) * 1%), var(--surface-3, var(--line-2)) 0); }
+    .ring.fair { --ring: var(--warn); } .ring.poor { --ring: var(--err); }
+    .ring > b { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-size: var(--fs-xl, 20px); font-variant-numeric: tabular-nums; }
+    .why { list-style: none; margin: var(--sp-3, 12px) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1, 4px); font-size: var(--fs-sm, 13px); }
+    .why li { display: flex; gap: var(--sp-2, 8px); align-items: baseline; }
+    .why .minus { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1, 4px); font-size: var(--fs-sm, 13px); }
+    .changes li { display: flex; gap: var(--sp-2, 8px); align-items: baseline; overflow-wrap: anywhere; }
+    /* Menü „Teilen“ und Rechtsklick-Menü: bleiben im Rahmen der Erweiterung (absolute Lage, kleiner z-index) */
+    .menu-wrap { position: relative; }
+    .menu { position: absolute; z-index: 20; min-width: 260px; padding: var(--sp-1, 4px); background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-lg, 10px); box-shadow: var(--shadow-lg, var(--shadow, none)); }
+    .menu[hidden] { display: none; }
+    .menu-wrap > .menu { right: 0; top: calc(100% + var(--sp-1, 4px)); }
+    .menu .mi { display: flex; align-items: center; gap: var(--sp-2, 8px); width: 100%; min-height: var(--control-h-sm, 28px); padding: var(--sp-2, 8px) var(--sp-3, 12px); background: none; border: 0; border-radius: var(--r-sm, 6px); color: var(--text); font: inherit; font-size: var(--fs-sm, 13px); text-align: left; cursor: pointer; }
+    .menu .mi:hover, .menu .mi:focus-visible { background: var(--surface-2); outline: none; }
+    .menu .mi:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-ring, var(--accent)); }
+    .menu .mi svg { flex: none; width: 16px; height: 16px; color: var(--muted); }
+    .menu .mi .mi-key { margin-left: auto; color: var(--muted); font-size: var(--fs-xs, 12px); }
+    .menu .mi[aria-checked="true"] .check-box { background: var(--accent); border-color: var(--accent); }
+    .check-box { flex: none; width: 16px; height: 16px; border: 1px solid var(--line-2); border-radius: var(--r-xs, 4px); display: grid; place-items: center; color: var(--accent-contrast, var(--bg)); }
+    .check-box svg { width: 12px; height: 12px; visibility: hidden; }
+    .menu .mi[aria-checked="true"] .check-box svg { visibility: visible; color: var(--accent-contrast, var(--bg)); }
+    .menu-sep { height: 1px; background: var(--line); margin: var(--sp-1, 4px) 0; }
+    .menu-title { padding: var(--sp-1, 4px) var(--sp-3, 12px); color: var(--muted); font-size: var(--fs-xs, 12px); font-weight: 600; }
+    .btn svg { width: 15px; height: 15px; }
+    .print-only { display: none; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+    /* Druck: immer hell, kompakt, eine Seite – Systemfarben statt fester Werte; !important schlägt Hostwerks Farben am <html> */
+    @page { size: A4; margin: 12mm; }
+    @media print {
+      :root { color-scheme: light; --bg: Canvas !important; --surface: Canvas !important; --surface-2: Canvas !important; --surface-3: Canvas !important;
+        --text: CanvasText !important; --text-2: CanvasText !important; --muted: GrayText !important; --line: GrayText !important; --line-2: GrayText !important;
+        --ok-text: CanvasText !important; --warn-text: CanvasText !important; --err-text: CanvasText !important; --accent-text: CanvasText !important;
+        --hw-bg: Canvas !important; --hw-surface: Canvas !important; --hw-text: CanvasText !important; --hw-muted: GrayText !important; }
+      body { padding: 0; background: Canvas; color: CanvasText; font-size: var(--fs-xs, 12px); }
+      .no-print, .info-tip, .menu { display: none !important; }
+      .print-only { display: block; }
+      .card { box-shadow: none !important; border: 1px solid GrayText; break-inside: avoid; }
+      .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2, 8px); margin-bottom: var(--sp-2, 8px); }
+      .kpi { padding: var(--sp-2, 8px) var(--sp-3, 12px); }
+      .kpi .v { font-size: var(--fs-md, 14px); }
+      .layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--sp-2, 8px); }
+      .col { gap: var(--sp-2, 8px); }
+      .card-pad, .card-body { padding: var(--sp-2, 8px) var(--sp-3, 12px); }
+      .table td, .table th { padding: var(--sp-1, 4px) var(--sp-2, 8px); position: static; }
+      .svc-table .addr { max-width: none; white-space: normal; overflow-wrap: anywhere; }
+      .meter { border: 1px solid GrayText; } .meter > span { background: CanvasText !important; forced-color-adjust: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .ring { width: 48px; height: 48px; print-color-adjust: exact; -webkit-print-color-adjust: exact; } .ring > b { width: 38px; height: 38px; font-size: var(--fs-md, 14px); }
+      .scroll-x { overflow: visible; }
+    }
   </style>
 </head>
 <body>
-  <div class="row">
-    <div class="grow"><p class="muted" id="stamp" aria-live="polite"></p></div>
-    <div class="row no-print" style="flex-wrap: wrap">
-      <label class="share small"><input type="checkbox" id="noAddr"> <span data-i18n="noAddr"></span></label>
-      <button type="button" class="btn" id="copy" data-i18n="copy">Copy as text</button>
-      <button type="button" class="btn" id="json" data-i18n="json">Copy as JSON</button>
-      <button type="button" class="btn primary" id="print" data-i18n="print" data-i18n-title="printHint">Print / PDF</button>
+  <h1 class="print-only" id="printTitle"></h1>
+  <div class="top">
+    <div class="who">
+      <h2 class="who-name" id="deviceName" hidden></h2>
+      <button type="button" class="btn xs ghost no-print name-btn" id="nameBtn" data-i18n-title="nameHint" title="Name this PC"></button>
+      <input class="input name-input no-print" id="nameInput" maxlength="60" hidden data-i18n-placeholder="namePlaceholder" placeholder="Name of this PC">
+      <span class="muted small" id="stamp" aria-live="polite"></span>
+      <span class="no-print" id="aboutTip"></span>
+    </div>
+    <div class="row-tight no-print">
+      <button type="button" class="btn sm ghost" id="refresh" data-i18n-title="refresh" title="Refresh" aria-label="Refresh"></button>
+      <div class="menu-wrap">
+        <button type="button" class="btn sm primary" id="shareBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="shareMenu"></button>
+        <div class="menu" id="shareMenu" role="menu" aria-labelledby="shareBtn" hidden></div>
+      </div>
     </div>
   </div>
-  <div class="machine" id="machine"><div class="hw-skeleton" style="height: calc(var(--sp-8, 32px) * 2.5)"></div></div>
-  <div class="svc" id="services"></div>
-  <div class="svc" id="extra"></div>
+  <div id="main"><div class="kpis"><div class="hw-skeleton" style="height: calc(var(--sp-8, 32px) * 2.5)"></div><div class="hw-skeleton" style="height: calc(var(--sp-8, 32px) * 2.5)"></div><div class="hw-skeleton" style="height: calc(var(--sp-8, 32px) * 2.5)"></div></div></div>
+  <div class="menu" id="rowMenu" role="menu" hidden></div>
   <script src="lib.js"></script>
   <script src="app.js"></script>
 </body>
