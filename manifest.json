@@ -29,7 +29,11 @@
       "en": "Everything important about this PC and its services on one page – system, processor, memory, uptime, IP, services with ports and addresses, certificates. Print it (also as PDF), copy it as text or JSON – without addresses if you like."
     },
     "nav": {
-      "group": "system"
+      "group": "monitoring",
+      "groupTitle": {
+        "de": "Überwachung",
+        "en": "Monitoring"
+      }
     }
   },
   "version": "1.3.0",
