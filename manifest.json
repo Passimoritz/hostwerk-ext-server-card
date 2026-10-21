@@ -8,12 +8,14 @@
     "en": "Server profile"
   },
   "description": {
-    "de": "Alles Wichtige über diesen PC und seine Dienste auf einer Seite – Prozessor, Speicher, Laufzeit, Dienste mit Ports und Adressen. Zum Drucken oder als Text kopieren.",
-    "en": "Everything important about this PC and its services on one page – processor, memory, uptime, services with ports and addresses. Print it or copy it as text."
+    "de": "Alles Wichtige über diesen PC und seine Dienste auf einer Seite – System, Prozessor, Speicher, Laufzeit, IP, Dienste mit Ports und Adressen, Zertifikate. Zum Drucken (auch als PDF), als Text oder JSON – auf Wunsch ohne Adressen.",
+    "en": "Everything important about this PC and its services on one page – system, processor, memory, uptime, IP, services with ports and addresses, certificates. Print it (also as PDF), copy it as text or JSON – without addresses if you like."
   },
   "permissions": [
     "read:system",
-    "read:services"
+    "read:services",
+    "read:network",
+    "read:live"
   ],
   "page": {
     "title": {
@@ -23,15 +25,31 @@
     "icon": "server",
     "file": "page/index.html",
     "description": {
-      "de": "Alles Wichtige über diesen PC und seine Dienste auf einer Seite – Prozessor, Speicher, Laufzeit, Dienste mit Ports und Adressen. Zum Drucken oder als Text kopieren.",
-      "en": "Everything important about this PC and its services on one page – processor, memory, uptime, services with ports and addresses. Print it or copy it as text."
+      "de": "Alles Wichtige über diesen PC und seine Dienste auf einer Seite – System, Prozessor, Speicher, Laufzeit, IP, Dienste mit Ports und Adressen, Zertifikate. Zum Drucken (auch als PDF), als Text oder JSON – auf Wunsch ohne Adressen.",
+      "en": "Everything important about this PC and its services on one page – system, processor, memory, uptime, IP, services with ports and addresses, certificates. Print it (also as PDF), copy it as text or JSON – without addresses if you like."
+    },
+    "nav": {
+      "group": "system"
     }
   },
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-server-card",
   "license": "MIT",
   "icon": "icon.svg",
   "banner": "banner.svg",
-  "hostwerk": ">=2.9.0"
+  "hostwerk": ">=2.9.0",
+  "widget": {
+    "title": {
+      "de": "Steckbrief",
+      "en": "Server profile"
+    },
+    "file": "widget/index.html",
+    "size": "third"
+  },
+  "allowExtensions": {
+    "*": [
+      "tabs"
+    ]
+  }
 }

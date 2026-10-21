@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/ext-sdk.js"></script>
+</head>
+<body>
+  <!-- Kachel: laufende Dienste, Auslastung und Speicher – ein Klick öffnet den ganzen Steckbrief -->
+  <div class="stat">
+    <div class="k" data-i18n="widgetTitle"></div>
+    <div class="v" id="v" aria-live="polite">–</div>
+    <div class="s" id="sub"></div>
+    <div class="row-tight" style="margin-top: var(--sp-2, 8px)">
+      <button type="button" class="btn xs" id="retry" hidden data-i18n="retry"></button>
+      <button type="button" class="btn xs ghost" id="open" data-i18n="widgetOpen"></button>
+    </div>
+  </div>
+  <script src="../page/lib.js"></script>
+  <script>
+    async function load() {
+      const v = document.getElementById('v'), sub = document.getElementById('sub'), retry = document.getElementById('retry');
+      try {
+        const [res, o] = await Promise.all([Hostwerk.get('/system/resources'), Hostwerk.get('/overview')]);
+        const x = ServerCard.tile(ServerCard.fromOverview(o), ServerCard.machine(res));
+        v.textContent = `${Hostwerk.fmt.number(x.up)} / ${Hostwerk.fmt.number(x.all)}`;
+        sub.textContent = [Hostwerk.t('widgetSub', { up: x.up, all: x.all }), x.cpu != null ? Hostwerk.t('load', { n: x.cpu }) : '', x.ram != null ? Hostwerk.t('usedPct', { n: x.ram }) : ''].filter(Boolean).join(' · ');
+        retry.hidden = true;
+      } catch {
+        v.textContent = '–';
+        sub.textContent = Hostwerk.t('widgetFailed');
+        retry.hidden = false;
+      }
+    }
+    document.getElementById('retry').addEventListener('click', load);
+    document.getElementById('open').addEventListener('click', () => Hostwerk.navigate('/ext/server-card'));
+    // Alle 30 s nachladen – nicht, solange die Übersicht verborgen ist
+    setInterval(() => { if (!document.hidden) load(); }, 30000);
+    Hostwerk.ready().then(() => { load(); Hostwerk.on('service', load); Hostwerk.on('lang', load); });
+  </script>
+</body>
+</html>
