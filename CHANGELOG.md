@@ -1,3 +1,7 @@
+## 1.3.1
+
+- Buttons have a name for screen readers right away, before the language has loaded. / Knöpfe haben sofort einen Namen für Bildschirmleser, schon bevor die Sprache geladen ist.
+
 ## 1.3.0
 
 - Copied text shows the local time in Hostwerk's language instead of UTC (it was off by one or two hours) and includes the uptime. / Kopiertext in Ortszeit statt UTC, mit Laufzeit.
