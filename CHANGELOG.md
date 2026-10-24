@@ -1,3 +1,7 @@
+## 1.4.1
+
+- New animated icon and banner in the common Hostwerk style (isometric block). / Neues animiertes Symbol und Banner im gemeinsamen Hostwerk-Stil (isometrischer Block).
+
 ## 1.4.0
 
 - Moved into Hostwerk: the profile is now a **Profile tab under System** instead of an own page in the sidebar; the dashboard tile opens it there. / Eingebaut: jetzt Reiter **Steckbrief unter System** statt eigener Seite in der Seitenleiste; die Kachel öffnet ihn dort.
