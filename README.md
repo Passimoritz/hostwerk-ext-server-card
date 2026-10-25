@@ -4,9 +4,9 @@
 
 Everything important about this PC and its services, right where you look after your system: a **Profile** tab under **System**. Health score, processor, memory, drive, network with open ports, software versions, all services in one table, certificates – and what changed since last time. Share it as text, Markdown, JSON or PDF – without addresses, or redacted for a support request.
 
-An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension.
+[Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension (runs sandboxed, Hostwerk 2.9 or newer)
 
-## Features
+## What it does
 
 - **Lives under System → Profile** (no own sidebar entry); the dashboard tile opens it
 - **Key figures with bars**: processor (long names wrap cleanly, full name as tooltip) with average load, memory in use, free space on Hostwerk's drive incl. how much the services take, uptime since when, local IP
@@ -37,7 +37,7 @@ Each extra part only appears when its permission and data are there – the prof
 
 Pages run isolated (own origin, no external scripts); anything that changes something asks you first.
 
-## Development
+## Develop
 
 ```bash
 node --test tests/*.test.js            # logic tests
@@ -47,3 +47,7 @@ node path/to/hostwerk-public/sdk/check.js . --strict   # same check as the catal
 The logic lives in `page/lib.js` (no DOM, tested), the tab in `page/app.js`, the tile in `widget/index.html`. A tag `vX.Y.Z` matching `manifest.json` publishes a release; the Hostwerk catalog picks it up.
 
 Deutsch: [README.de.md](README.de.md) · License: MIT
+
+## License
+
+MIT
