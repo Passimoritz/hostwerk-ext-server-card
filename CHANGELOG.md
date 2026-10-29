@@ -1,3 +1,7 @@
+## 1.5.0
+
+- Backups and System rebuilt (SDK 3.12): the profile is a section on System → Overview, under “This PC” (#/system) – the tile opens it there; older Hostwerk versions keep version 1.4 with the tab System → Profile. / Sicherungen und System neu (SDK 3.12): Der Steckbrief ist ein Abschnitt auf System → Lage, unter „Dieser PC“ (#/system) – die Kachel öffnet ihn dort; ältere Hostwerk-Versionen behalten Version 1.4 mit dem Reiter System → Steckbrief.
+
 ## 1.4.1
 
 - New animated icon and banner in the common Hostwerk style (isometric block). / Neues animiertes Symbol und Banner im gemeinsamen Hostwerk-Stil (isometrischer Block).

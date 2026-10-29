@@ -2,13 +2,13 @@
 
 # Server-Steckbrief
 
-Alles Wichtige über diesen PC und seine Dienste – dort, wo du dich um dein System kümmerst: als Reiter **Steckbrief** unter **System**. Zustand als Punktzahl, Prozessor, Speicher, Laufwerk, Netzwerk mit offenen Ports, Software-Versionen, alle Dienste in einer Tabelle, Zertifikate – und was sich seit dem letzten Mal geändert hat. Teilen als Text, Markdown, JSON oder PDF – ohne Adressen oder geschwärzt für eine Support-Anfrage.
+Alles Wichtige über diesen PC und seine Dienste – dort, wo du dich um dein System kümmerst: als Abschnitt **Steckbrief** auf **System → Lage**. Zustand als Punktzahl, Prozessor, Speicher, Laufwerk, Netzwerk mit offenen Ports, Software-Versionen, alle Dienste in einer Tabelle, Zertifikate – und was sich seit dem letzten Mal geändert hat. Teilen als Text, Markdown, JSON oder PDF – ohne Adressen oder geschwärzt für eine Support-Anfrage.
 
 [English](README.md) · Offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung (läuft abgeschottet, ab Hostwerk 2.9)
 
 ## Was sie kann
 
-- **Steht unter System → Steckbrief** (kein eigener Eintrag in der Seitenleiste); die Kachel in der Übersicht öffnet ihn
+- **Steht auf System → Lage**, unter „Dieser PC“ (Hostwerk vor SDK 3.12: System → Steckbrief; kein eigener Eintrag in der Seitenleiste); die Kachel in der Übersicht öffnet ihn
 - **Kennzahlen mit Balken**: Prozessor (lange Namen brechen sauber um, ganzer Name als Tooltip) mit Ø-Last, belegter Arbeitsspeicher, freier Platz auf Hostwerks Laufwerk samt Anteil der Dienste, Laufzeit mit Startzeit, IP im Heimnetz
 - **Zustand von 0 bis 100** mit dem Grund für jeden Abzug: Dienste mit Fehler, ablaufende oder fehlende Zertifikate, Sicherheitshinweise, volles Laufwerk oder voller Arbeitsspeicher, Port-Konflikte, ausgefallene Erreichbarkeits-Prüfungen
 - **Dienste als eine Tabelle**: Name, Art, Zustand mit Punkt, Port, Adresse, Programm und Version (PHP je Webserver) – Klick auf den Namen öffnet den Dienst, Rechtsklick kopiert Zeile, Port oder Adresse

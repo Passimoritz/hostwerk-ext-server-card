@@ -67,8 +67,8 @@
       }
     }
     document.getElementById('retry').addEventListener('click', load);
-    // Der Steckbrief ist ein Reiter unter System (contributes.tabs, area:system)
-    document.getElementById('open').addEventListener('click', () => Hostwerk.navigate('/system/x-server-card-profile'));
+    // Der Steckbrief ist seit 1.5 (SDK 3.12) ein Abschnitt auf System → Lage (contributes.sections, system.lage)
+    document.getElementById('open').addEventListener('click', () => Hostwerk.navigate('/system'));
     // Alle 30 s nachladen – nicht, solange die Übersicht verborgen ist
     setInterval(() => { if (!document.hidden) load(); }, 30000);
     Hostwerk.ready().then(() => { load(); Hostwerk.on('service', load); Hostwerk.on('lang', load); });

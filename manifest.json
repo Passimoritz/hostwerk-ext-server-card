@@ -18,13 +18,14 @@
     "read:live",
     "storage"
   ],
-  "version": "1.4.1",
+  "version": "1.5.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-server-card",
   "license": "MIT",
   "icon": "icon.svg",
   "banner": "banner.svg",
   "hostwerk": ">=2.9.0",
+  "sdkVersion": "3.12",
   "widget": {
     "title": {
       "de": "Steckbrief",
@@ -34,6 +35,18 @@
     "size": "third"
   },
   "contributes": {
+    "sections": [
+      {
+        "id": "profile",
+        "on": "system.lage",
+        "title": {
+          "de": "Steckbrief",
+          "en": "Profile"
+        },
+        "icon": "server",
+        "file": "page/index.html"
+      }
+    ],
     "tabs": [
       {
         "id": "profile",
@@ -43,7 +56,8 @@
           "en": "Profile"
         },
         "icon": "server",
-        "file": "page/index.html"
+        "file": "page/index.html",
+        "fallback": true
       }
     ]
   }

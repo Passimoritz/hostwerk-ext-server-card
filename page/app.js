@@ -1,4 +1,4 @@
-// Server-Steckbrief – Reiter unter System: alles Wichtige über diesen PC und seine Dienste (druckbar, kopierbar, mit Vergleich).
+// Server-Steckbrief – Abschnitt auf System → Lage (ältere Hostwerk: Reiter unter System): alles Wichtige über diesen PC und seine Dienste (druckbar, kopierbar, mit Vergleich).
 const { html, raw, t } = Hostwerk;
 const C = ServerCard;
 let card = null; // zuletzt geladener Steckbrief (ungekürzt)
