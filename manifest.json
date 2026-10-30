@@ -8,8 +8,8 @@
     "en": "Server profile"
   },
   "description": {
-    "de": "Alles Wichtige über diesen PC und seine Dienste als Reiter unter System – Zustand als Punktzahl, Prozessor, Speicher, Laufwerk, Netzwerk mit offenen Ports, Software-Versionen, Dienste, Zertifikate und was sich seit dem letzten Mal geändert hat. Teilen als Text, Markdown, JSON oder PDF – auf Wunsch ohne Adressen oder geschwärzt für den Support.",
-    "en": "Everything important about this PC and its services as a tab under System – health score, processor, memory, drive, network with open ports, software versions, services, certificates and what changed since last time. Share it as text, Markdown, JSON or PDF – without addresses or redacted for support if you like."
+    "de": "Alles Wichtige über diesen PC und seine Dienste als Abschnitt auf System → Lage – Zustand als Punktzahl, Prozessor, Speicher, Laufwerk, Netzwerk mit offenen Ports, Software-Versionen, Dienste, Zertifikate und was sich seit dem letzten Mal geändert hat. Teilen als Text, Markdown, JSON oder PDF – auf Wunsch ohne Adressen oder geschwärzt für den Support.",
+    "en": "Everything important about this PC and its services as a section on System → Status – health score, processor, memory, drive, network with open ports, software versions, services, certificates and what changed since last time. Share it as text, Markdown, JSON or PDF – without addresses or redacted for support if you like."
   },
   "permissions": [
     "read:system",

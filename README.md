@@ -2,13 +2,13 @@
 
 # Server profile
 
-Everything important about this PC and its services, right where you look after your system: a **Profile** section on **System → Overview**. Health score, processor, memory, drive, network with open ports, software versions, all services in one table, certificates – and what changed since last time. Share it as text, Markdown, JSON or PDF – without addresses, or redacted for a support request.
+Everything important about this PC and its services, right where you look after your system: a **Profile** section on **System → Status**. Health score, processor, memory, drive, network with open ports, software versions, all services in one table, certificates – and what changed since last time. Share it as text, Markdown, JSON or PDF – without addresses, or redacted for a support request.
 
 [Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension (runs sandboxed, Hostwerk 2.9 or newer)
 
 ## What it does
 
-- **Lives on System → Overview**, under “This PC” (Hostwerk before SDK 3.12: System → Profile; no own sidebar entry); the dashboard tile opens it
+- **Lives on System → Status**, under “This PC” (Hostwerk before SDK 3.12: System → Profile; no own sidebar entry); the dashboard tile opens it
 - **Key figures with bars**: processor (long names wrap cleanly, full name as tooltip) with average load, memory in use, free space on Hostwerk's drive incl. how much the services take, uptime since when, local IP
 - **Health score 0–100** with the reasons behind every deduction: services with errors, expiring or missing certificates, security warnings, full drive or memory, port conflicts, failed uptime checks
 - **Services as one table**: name, kind, state with a dot, port, address, software and version (PHP per web server) – click a name to open it, right-click a row to copy the line, port or address
