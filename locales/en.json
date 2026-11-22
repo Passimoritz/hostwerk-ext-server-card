@@ -32,7 +32,7 @@
   "ofTotal": "of {n}",
   "svcBytes": "services {n}",
   "computing": "calculating …",
-  "uptime": "Uptime",
+  "uptime": "PC uptime",
   "sinceTime": "since {time}",
   "ip": "Local IP",
   "ipPublic": "public",
@@ -82,6 +82,7 @@
   "state.error": "error",
   "state.starting": "starting",
   "state.stopping": "stopping",
+  "state.unknown": "unknown",
   "software": "Software",
   "active": "active",
   "ai": "AI",
@@ -166,5 +167,9 @@
   "widgetTitle": "Server profile",
   "widgetSub": "{up} of {all} services running",
   "widgetOpen": "Open profile",
-  "widgetFailed": "Not reachable right now"
+  "widgetFailed": "Not reachable right now",
+  "svcSearch": "Search services …",
+  "onlyProblems": "Only problems",
+  "noMatch": "No service matches the search.",
+  "noProblems": "No problems – every service is running."
 }

@@ -193,3 +193,48 @@ test('Wege zu den Diensten in Hostwerk', () => {
   assert.strictEqual(C.ROUTES.minecraft('m'), '/mc/m');
   assert.strictEqual(C.ROUTES.mail(), '/mail');
 });
+
+test('Unbekannte Zustände heißen „unknown“ – nie ein roher Schlüssel', () => {
+  const list = C.fromOverview({ web: [{ id: 'w', name: 'X', proc: { state: 'paused' } }, { id: 'v', name: 'Y', proc: null }] });
+  assert.deepStrictEqual(list.map((s) => s.state), ['unknown', 'stopped']);
+});
+
+test('Sicherheit: englischer Titel, wenn Hostwerk ihn liefert', () => {
+  const s = { items: [{ id: 'cert:a.de', level: 'err', title: 'a.de: Zertifikat läuft bald ab', titleEn: 'a.de: certificate expires soon' }, { id: 'x', level: 'warn', title: 'Nur deutsch' }] };
+  assert.deepStrictEqual(C.security(s, 'en').items.map((x) => x.title), ['a.de: certificate expires soon', 'Nur deutsch']);
+  assert.strictEqual(C.security(s, 'de').items[0].title, 'a.de: Zertifikat läuft bald ab');
+});
+
+test('Ohne Adressen: Domains, Webadressen und IPs auch aus Hinweisen, Prüfungen und Freigabe-Namen', () => {
+  const card = { groups: [], network: { localIp: '1.2.3.4', forwards: [{ port: 443, protocol: 'TCP', label: 'HTTPS für shop.example.org' }] },
+    security: { err: 1, warn: 1, items: [{ level: 'err', title: 'shop.example.org: ohne HTTPS', kind: 'web-https' }, { level: 'warn', title: 'PHP 8.3: Fehler werden angezeigt', kind: 'php-errors' }] },
+    down: ['https://shop.example.org/health', 'API-Check'] };
+  const r = C.redact(card);
+  const json = C.asJson(r);
+  assert.ok(!/example\.org|1\.2\.3\.4/.test(json), json);
+  assert.deepStrictEqual(r.down, ['…', 'API-Check']);
+  assert.strictEqual(r.security.items[1].title, 'PHP 8.3: Fehler werden angezeigt');
+  assert.strictEqual(C.scrub('Node.js 22, index.php, 12:57:30, v3.3.0'), 'Node.js 22, index.php, 12:57:30, v3.3.0');
+  assert.strictEqual(C.scrub('fe80::1 und 192.168.1.5:8080'), '… und …');
+});
+
+test('Vergleich: fehlende Rechner-Werte (Abfrage gescheitert) sind keine Änderung', () => {
+  const prev = { cpu: 'AMD', cores: 16, ramGB: 32, os: 'Windows', hostwerk: '3.3.0', ip: '1.2.3.4', services: [], php: [], forwards: [] };
+  assert.deepStrictEqual(C.diff(prev, { ...prev, cpu: null, cores: null, ramGB: null, ip: null }), []);
+  assert.deepStrictEqual(C.diff(prev, { ...prev, ramGB: 64 }).map((x) => [x.type, x.from, x.to]), [['ram', 32, 64]]);
+});
+
+test('Dienste-Tabelle: Suche (Name, Art-Text, Port, Programm) und „Nur Probleme“, Index bleibt der aus der ganzen Liste', () => {
+  const list = [
+    { name: 'Shop', kind: 'web', state: 'running', port: 8080, type: 'nginx', version: '1.27' },
+    { name: 'Survival', kind: 'minecraft', state: 'stopped', port: 25565 },
+    { name: 'Daten', kind: 'db', state: 'error', port: 3306, type: 'MariaDB' },
+  ];
+  const kindText = (k) => ({ web: 'Webserver', db: 'Datenbank', minecraft: 'Minecraft' }[k]);
+  assert.deepStrictEqual(C.filterServices(list).map((x) => x.i), [0, 1, 2]);
+  assert.deepStrictEqual(C.filterServices(list, { q: 'maria' }).map((x) => x.i), [2]);
+  assert.deepStrictEqual(C.filterServices(list, { q: 'datenbank', kindText }).map((x) => x.i), [2]);
+  assert.deepStrictEqual(C.filterServices(list, { q: '25565' }).map((x) => x.i), [1]);
+  assert.deepStrictEqual(C.filterServices(list, { problems: true }).map((x) => x.i), [1, 2]);
+  assert.deepStrictEqual(C.filterServices(list, { problems: true, q: 'shop' }), []);
+});

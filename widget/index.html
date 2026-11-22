@@ -36,6 +36,14 @@
   <script src="../page/lib.js"></script>
   <script>
     const { html, t } = Hostwerk;
+    // lib.js nicht geladen (Netzfehler, Hostwerk ausgelastet): Hinweis und „Erneut versuchen“ lädt die Kachel neu
+    if (typeof ServerCard === 'undefined') {
+      Hostwerk.ready().then(() => {
+        document.getElementById('sub').textContent = t('widgetFailed');
+        const r = document.getElementById('retry'); r.hidden = false; r.addEventListener('click', () => location.reload());
+      });
+      throw new Error('server-card: page/lib.js was not loaded');
+    }
     const C = ServerCard;
     let extras = { at: 0 }; // Zertifikate, Laufwerk, Sicherheit, Ports – für die Punktzahl, höchstens alle 5 Minuten
     const meter = (n) => html`<div class="meter ${n >= 90 ? 'err' : n >= 80 ? 'warn' : ''}" aria-hidden="true"><span style="width: ${Math.max(2, n)}%"></span></div>`;

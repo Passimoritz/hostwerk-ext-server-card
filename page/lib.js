@@ -8,6 +8,8 @@
   const KINDS = ['web', 'db', 'minecraft', 'game', 'app', 'mail'];
   /** Hostwerk-Bereich je Art (für „Öffnen“ im Rechtsklick-Menü); Spiele-Server leben in ihrer Erweiterung. */
   const ROUTES = { web: (id) => `/web/${id}`, db: (id) => `/dbs/${id}`, minecraft: (id) => `/mc/${id}`, app: (id) => `/apps/${id}`, game: () => '/ext/game-servers', mail: () => '/mail' };
+  /** Zustände mit eigenem Text (state.<zustand>); alles andere heißt „unknown“. */
+  const STATES = ['running', 'stopped', 'error', 'starting', 'stopping'];
   const pct = (a, b) => (b ? Math.max(0, Math.min(100, Math.round((a / b) * 100))) : null);
 
   /** Rechner aus /system/resources: Prozessor, Kerne, Arbeitsspeicher, Laufzeit, Auslastung (Ø der letzten Werte). */
@@ -29,7 +31,8 @@
    */
   function fromOverview(o) {
     const x = o || {};
-    const state = (s) => (s.proc && s.proc.state) || 'stopped';
+    // Unbekannte Zustände (neue Hostwerk-Versionen, Erweiterungen) als „unknown“ – nie ein roher Schlüssel in der Tabelle
+    const state = (s) => { const v = (s.proc && s.proc.state) || 'stopped'; return STATES.includes(v) ? v : 'unknown'; };
     const pick = (kind, xs, url) => (Array.isArray(xs) ? xs : []).filter(Boolean).map((s) => ({
       kind, id: s.id, name: s.name || String(s.id), state: state(s), port: s.port || null, url: url ? url(s) : null,
       type: s.typeLabel || s.kindLabel || null, version: s.version ? String(s.version) : null, php: s.phpResolved || null,
@@ -97,11 +100,14 @@
       router: rt, link, forwards, dyndns: (r.dyndns && r.dyndns.domain) || null,
     };
   }
-  /** Sicherheitslage aus /live/security: Anzahl je Stufe und die Hinweise (kind = Art ohne Namen, für die Schwärzung). */
-  function security(s) {
+  /**
+   * Sicherheitslage aus /live/security: Anzahl je Stufe und die Hinweise (kind = Art ohne Namen, für die Schwärzung).
+   * lang 'en': Hostwerk liefert den Titel auch englisch (titleEn).
+   */
+  function security(s, lang) {
     if (!s || !Array.isArray(s.items)) return null;
     const n = (lv) => s.items.filter((x) => x.level === lv).length;
-    return { err: n('err'), warn: n('warn'), info: n('info'), items: s.items.filter((x) => x.level !== 'info').map((x) => ({ level: x.level, title: x.title || '', kind: String(x.id || '').split(':')[0] })) };
+    return { err: n('err'), warn: n('warn'), info: n('info'), items: s.items.filter((x) => x.level !== 'info').map((x) => ({ level: x.level, title: (lang === 'en' && x.titleEn) || x.title || '', kind: String(x.id || '').split(':')[0] })) };
   }
   /** Installierte Software: PHP-Versionen (aktive markiert), Programme der Dienste mit Version, KI. */
   function software(o, list) {
@@ -143,6 +149,16 @@
     return { score, grade: score >= 85 ? 'good' : score >= 60 ? 'fair' : 'poor', why };
   }
 
+  /** Webadressen, IPv4/IPv6 und Domains in freiem Text durch „…“ ersetzen (Dateiendungen wie „index.php“ bleiben). */
+  const TLD = /\.(?:[a-z]{2}|com|org|net|info|biz|dev|app|online|shop|site|xyz|cloud|test|local|lan|home|internal|example)$/i;
+  const FILE = /\.(?:js|ts|py|md|sh|rs|go|cs|rb|pl|ps|gz|xz|db|mc)$/i; // Programme und Dateien wie „Node.js“, keine Domains
+  function scrub(s) {
+    return String(s == null ? '' : s)
+      .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, '…')
+      .replace(/\b\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/g, '…')
+      .replace(/(?<![\w:])(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}(?![\w:])/gi, (m) => ((m.includes('::') || /[a-f]/i.test(m)) && /[0-9a-f]/i.test(m) ? '…' : m))
+      .replace(/\b(?:[a-z0-9äöüß](?:[a-z0-9äöüß-]*[a-z0-9äöüß])?\.)+[a-z]{2,24}\b/gi, (m) => (TLD.test(m) && !FILE.test(m) ? '…' : m));
+  }
   /**
    * Zum Teilen „ohne Adressen“: keine IPs, Webadressen und Domains. Ports bleiben (sie verraten allein nichts),
    * Zertifikate behalten nur ihre Resttage. support: zusätzlich ohne Gerätenamen und Dienstnamen (für Support-Anfragen).
@@ -155,12 +171,13 @@
       ...card,
       name: opts.support ? null : card.name || null,
       about: card.about ? { ...card.about, domain: null } : card.about,
-      network: net ? { ...net, localIp: null, externalIp: null, ipv6: null, gateway: null, dyndns: null, forwards: (net.forwards || []).map((f) => ({ ...f, label: opts.support ? '' : f.label })) } : null,
+      network: net ? { ...net, localIp: null, externalIp: null, ipv6: null, gateway: null, dyndns: null, forwards: (net.forwards || []).map((f) => ({ ...f, label: opts.support ? '' : scrub(f.label) })) } : null,
       groups: (card.groups || []).map((g) => ({ ...g, items: g.items.map((s) => ({ ...s, url: null, ...(opts.support ? { name: anon(s), id: null } : {}) })) })),
       certs: (card.certs || []).map((c, i) => ({ ...c, name: `#${i + 1}` })),
       ports: (card.ports || []).map((p) => (opts.support ? { ...p, name: '', by: null } : p)),
-      security: card.security && opts.support ? { ...card.security, items: card.security.items.map((x) => ({ ...x, title: x.kind })) } : card.security,
-      down: opts.support ? (card.down || []).map((_, i) => `#${i + 1}`) : card.down,
+      // Hinweis-Titel und Prüfungs-Namen nennen oft Domains oder Adressen („shop.de: ohne HTTPS“) – die fallen heraus
+      security: card.security ? { ...card.security, items: card.security.items.map((x) => ({ ...x, title: opts.support ? x.kind : scrub(x.title) })) } : card.security,
+      down: (card.down || []).map((d, i) => (opts.support ? `#${i + 1}` : scrub(d))),
       redacted: opts.support ? 'support' : 'addresses',
     };
   }
@@ -186,8 +203,10 @@
     if (!prev || !cur) return [];
     const out = [];
     const ch = (type, from, to, extra) => { if ((from || null) !== (to || null)) out.push({ type, from: from == null ? null : from, to: to == null ? null : to, ...extra }); };
-    ch('hostwerk', prev.hostwerk, cur.hostwerk); ch('os', prev.os, cur.os); ch('cpu', prev.cpu, cur.cpu); ch('cores', prev.cores, cur.cores); ch('ram', prev.ramGB, cur.ramGB);
-    ch('ip', prev.ip, cur.ip); ch('publicIp', prev.publicIp, cur.publicIp);
+    // Rechner-Werte: fehlt der aktuelle Wert (Abfrage gerade gescheitert), ist das keine Änderung
+    const hw = (type, from, to) => { if (to != null && to !== '') ch(type, from, to); };
+    hw('hostwerk', prev.hostwerk, cur.hostwerk); hw('os', prev.os, cur.os); hw('cpu', prev.cpu, cur.cpu); hw('cores', prev.cores, cur.cores); hw('ram', prev.ramGB, cur.ramGB);
+    hw('ip', prev.ip, cur.ip); hw('publicIp', prev.publicIp, cur.publicIp); // ohne Router-Antwort: unbekannt, nicht „weg“
     const pp = new Set(prev.php || []); const cp = new Set(cur.php || []);
     for (const v of cp) if (!pp.has(v)) out.push({ type: 'phpAdded', to: v });
     for (const v of pp) if (!cp.has(v)) out.push({ type: 'phpRemoved', from: v });
@@ -313,5 +332,18 @@
     return { up: (list || []).filter((s) => s.state === 'running').length, all, cpu: m ? m.avgCpu : null, ram: m ? m.ramUsedPct : null, score: h ? h.score : null, grade: h ? h.grade : null };
   }
 
-  return { KINDS, ROUTES, machine, fromOverview, about, services, flat, certs, ports, uiPort, disk, network, security, software, health, redact, snapshot, diff, asText, asMarkdown, asJson, tile };
+  /**
+   * Dienste-Tabelle filtern: q sucht in Name, Art (auch dem angezeigten Text), Port, Adresse und Programm; problems = nur
+   * Fehler und gestoppte. Liefert [{ s, i }] mit dem Index in der ganzen Liste (Öffnen/Rechtsklick zählen danach).
+   */
+  function filterServices(list, { q = '', problems = false, kindText = (k) => k } = {}) {
+    const needle = String(q || '').trim().toLowerCase();
+    return (list || []).map((s, i) => ({ s, i })).filter(({ s }) => {
+      if (problems && !(s.state === 'error' || s.state === 'stopped')) return false;
+      if (!needle) return true;
+      return [s.name, s.kind, kindText(s.kind), s.port, s.url, s.type, s.version].some((v) => v != null && String(v).toLowerCase().includes(needle));
+    });
+  }
+
+  return { filterServices, KINDS, STATES, ROUTES, scrub, machine, fromOverview, about, services, flat, certs, ports, uiPort, disk, network, security, software, health, redact, snapshot, diff, asText, asMarkdown, asJson, tile };
 }));

@@ -32,7 +32,7 @@
   "ofTotal": "von {n}",
   "svcBytes": "Dienste {n}",
   "computing": "wird berechnet …",
-  "uptime": "Läuft seit",
+  "uptime": "PC läuft seit",
   "sinceTime": "seit {time}",
   "ip": "IP im Heimnetz",
   "ipPublic": "öffentlich",
@@ -82,6 +82,7 @@
   "state.error": "Fehler",
   "state.starting": "startet",
   "state.stopping": "stoppt",
+  "state.unknown": "unbekannt",
   "software": "Software",
   "active": "aktiv",
   "ai": "KI",
@@ -166,5 +167,9 @@
   "widgetTitle": "Steckbrief",
   "widgetSub": "{up} von {all} Diensten laufen",
   "widgetOpen": "Steckbrief öffnen",
-  "widgetFailed": "Gerade nicht erreichbar"
+  "widgetFailed": "Gerade nicht erreichbar",
+  "svcSearch": "Dienste suchen …",
+  "onlyProblems": "Nur Probleme",
+  "noMatch": "Kein Dienst passt zur Suche.",
+  "noProblems": "Keine Probleme – alle Dienste laufen."
 }

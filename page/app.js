@@ -1,5 +1,13 @@
 // Server-Steckbrief – Abschnitt auf System → Lage (ältere Hostwerk: Reiter unter System): alles Wichtige über diesen PC und seine Dienste (druckbar, kopierbar, mit Vergleich).
 const { html, raw, t } = Hostwerk;
+// lib.js nicht geladen (Netzfehler, Hostwerk ausgelastet): Fehlerhinweis mit „Erneut versuchen“ statt ewigem Skelett
+if (typeof ServerCard === 'undefined') {
+  Hostwerk.ready().then(() => {
+    Hostwerk.render('#main', html`<div class="empty"><h3>${t('loadFailed')}</h3><div class="empty-action"><button type="button" class="btn" id="retry">${t('retry')}</button></div></div>`);
+    document.getElementById('retry').addEventListener('click', () => location.reload());
+  });
+  throw new Error('server-card: page/lib.js was not loaded');
+}
 const C = ServerCard;
 let card = null; // zuletzt geladener Steckbrief (ungekürzt)
 let hideAddresses = false; // „Ohne Adressen“: zum Teilen ohne IPs, Webadressen und Domains
@@ -9,6 +17,8 @@ let firstSnap = false; // gerade zum ersten Mal gemerkt
 let extras = { at: 0 }; // Zusätze (Router, Zertifikate, Ports, Laufwerk, Sicherheit) – höchstens jede Minute neu
 let secAt = 0; // Sicherheitslage prüft Firewall & Co. – höchstens alle 5 Minuten
 let loading = false;
+let svcQuery = ''; // Suche in der Dienste-Tabelle
+let svcProblems = false; // „Nur Probleme“: Fehler und gestoppte
 const $ = (id) => document.getElementById(id);
 const locale = () => (Hostwerk.lang === 'de' ? 'de-DE' : 'en-GB');
 const stamp = (ts) => new Date(ts).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }); // Ortszeit, nicht UTC
@@ -39,7 +49,7 @@ let tipSeq = 0;
 const tip = (label, text) => { const id = `tip-${++tipSeq}`; return html`<span class="info-tip"><button type="button" class="info-tip-btn" aria-label="${label}" aria-describedby="${id}">${I.info}</button><span class="info-tip-pop" role="tooltip" id="${id}"><b>${label}</b><span class="info-tip-body">${text}</span></span></span>`; };
 /** Balken für Anteile (CPU, Speicher, Laufwerk): ab 80 % gelb, ab 90 % rot. */
 const meter = (n, label) => (n == null ? '' : html`<div class="meter ${n >= 90 ? 'err' : n >= 80 ? 'warn' : ''}" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${n}" aria-label="${label}: ${n} %"><span style="width: ${Math.max(2, n)}%"></span></div>`);
-const dotClass = (st) => (st === 'running' ? 'ok' : st === 'error' ? 'err' : st === 'starting' || st === 'stopping' ? 'warn' : '');
+const dotClass = (st) => (st === 'running' ? 'ok' : st === 'error' ? 'err' : st === 'starting' || st === 'stopping' ? 'sc-dot-warn' : '');
 
 async function load(force) {
   if (loading) return;
@@ -51,6 +61,7 @@ async function load(force) {
       if (!card) {
         Hostwerk.render('#main', html`<div class="empty"><h3>${t('loadFailed')}</h3><p class="small muted">${(e && e.message) || ''}</p><div class="empty-action"><button type="button" class="btn" id="retry">${t('retry')}</button></div></div>`);
         $('retry').addEventListener('click', () => load(true));
+        $('shareBtn').disabled = true; // ohne Steckbrief gibt es nichts zu teilen
       } else $('stamp').textContent = t('staleSince', { time: stamp(card.at) });
       return;
     }
@@ -69,7 +80,7 @@ async function load(force) {
     card = {
       at: Date.now(), name: deviceName || null, about: { ...C.about(o), uiPort: C.uiPort(extras.ports) }, machine: C.machine(res), disk: C.disk(extras.du),
       network: C.network(extras.router), groups: C.services(list), up: list.filter((s) => s.state === 'running').length, all: list.length,
-      certs: C.certs(extras.certs), ports: C.ports(extras.ports), software: C.software(o, list), security: C.security(extras.security),
+      certs: C.certs(extras.certs), ports: C.ports(extras.ports), software: C.software(o, list), security: C.security(extras.security, Hostwerk.lang),
       down: (o.live && Array.isArray(o.live.down)) ? o.live.down : [],
     };
     card.health = C.health(card);
@@ -102,21 +113,34 @@ function kpis(c) {
   </div>`;
 }
 
+function svcRows(c) {
+  const list = C.flat(c.groups);
+  const rows = C.filterServices(list, { q: svcQuery, problems: svcProblems, kindText: kindLabel });
+  if (!rows.length) return html`<div class="empty"><p>${t(svcProblems && !svcQuery ? 'noProblems' : 'noMatch')}</p></div>`;
+  return html`<div class="scroll-x"><table class="table svc-table"><thead><tr><th scope="col">${t('thName')}</th><th scope="col">${t('thKind')}</th><th scope="col">${t('thState')}</th><th scope="col">${t('port')}</th><th scope="col">${t('thAddress')}</th><th scope="col">${t('thVersion')}</th></tr></thead><tbody>
+    ${rows.map(({ s, i }) => html`<tr data-svc="${i}"><td><span class="cell-name"><span class="dot ${dotClass(s.state)}" aria-hidden="true"></span><button type="button" class="open-btn" data-open="${i}" title="${t('openIn', { name: s.name })}">${s.name}</button></span></td>
+      <td class="muted kind">${kindLabel(s.kind)}</td><td>${t('state.' + s.state)}</td><td class="mono">${s.port || '–'}</td>
+      <td class="addr mono small" title="${s.url || ''}">${s.url || (hideAddresses && s.kind === 'web' ? t('hidden') : '–')}</td>
+      <td class="small prog">${[s.type, s.version].filter(Boolean).join(' ') || '–'}${s.php ? html` <span class="badge">PHP ${s.php}</span>` : ''}</td></tr>`)}
+  </tbody></table></div>`;
+}
 function servicesCard(c) {
   const list = C.flat(c.groups);
-  const body = list.length ? html`<div class="scroll-x"><table class="table svc-table"><thead><tr><th scope="col">${t('thName')}</th><th scope="col">${t('thKind')}</th><th scope="col">${t('thState')}</th><th scope="col">${t('port')}</th><th scope="col">${t('thAddress')}</th><th scope="col">${t('thVersion')}</th></tr></thead><tbody>
-    ${list.map((s, i) => html`<tr data-svc="${i}"><td><span class="cell-name"><span class="dot ${dotClass(s.state)}" aria-hidden="true"></span><button type="button" class="open-btn" data-open="${i}" title="${t('openIn', { name: s.name })}">${s.name}</button></span></td>
-      <td class="muted">${kindLabel(s.kind)}</td><td>${t('state.' + s.state)}</td><td class="mono">${s.port || '–'}</td>
-      <td class="addr mono small" title="${s.url || ''}">${s.url || (hideAddresses && s.kind === 'web' ? t('hidden') : '–')}</td>
-      <td class="small">${[s.type, s.version].filter(Boolean).join(' ') || '–'}${s.php ? html` <span class="badge">PHP ${s.php}</span>` : ''}</td></tr>`)}
-  </tbody></table></div>` : html`<div class="empty"><p>${t('empty')}</p></div>`;
-  return html`<div class="card"><div class="card-head"><h3>${t('services')}</h3>${list.length ? html`<span class="badge ${c.up === c.all ? 'ok' : ''}">${t('upOf', { up: num(c.up), all: num(c.all) })}</span>` : ''}</div>${body}</div>`;
+  // Suche erst ab ein paar Diensten; „Nur Probleme“ sobald es mehr als einen gibt
+  const tools = list.length > 1 ? html`<div class="row-tight sc-svc-tools no-print">${list.length > 6 ? html`<input class="input sm sc-svc-search" id="svcSearch" type="search" value="${svcQuery}" placeholder="${t('svcSearch')}" aria-label="${t('svcSearch')}">` : ''}<label class="row-tight small"><input type="checkbox" id="svcProblems" ${svcProblems ? Hostwerk.raw('checked') : ''}> ${t('onlyProblems')}</label></div>` : '';
+  const body = list.length ? html`${tools}<div id="svcRows">${svcRows(c)}</div>` : html`<div class="empty"><p>${t('empty')}</p></div>`;
+  return html`<div class="card"><div class="card-head sc-head"><h3>${t('services')}</h3>${list.length ? html`<span class="badge ${c.up === c.all ? 'ok' : ''}">${t('upOf', { up: num(c.up), all: num(c.all) })}</span>` : ''}</div>${body}</div>`;
 }
+// Nur die Tabelle neu zeichnen – sonst verlöre das Suchfeld bei jedem Tastendruck den Fokus
+const redrawRows = () => { const c = shown(); const box = $('svcRows'); if (c && box) Hostwerk.render(box, svcRows(c)); };
+document.addEventListener('input', (e) => { if (e.target && e.target.id === 'svcSearch') { svcQuery = e.target.value; redrawRows(); } });
+document.addEventListener('change', (e) => { if (e.target && e.target.id === 'svcProblems') { svcProblems = e.target.checked; redrawRows(); } });
 
 const val = (v) => (v == null || v === '' ? '–' : v);
 function changeText(x) {
   const v = { from: val(x.from), to: val(x.to), name: x.name || '', kind: x.kind ? kindLabel(x.kind) : '' };
   if ((x.type === 'ip' || x.type === 'publicIp') && hideAddresses) return t(`chg.${x.type}Hidden`);
+  if (x.type === 'ram') { v.from = x.from == null ? '–' : num(x.from); v.to = x.to == null ? '–' : num(x.to); } // 31,2 statt 31.2
   return t('chg.' + x.type, v);
 }
 function compareCard() {
@@ -126,7 +150,7 @@ function compareCard() {
   const body = firstSnap ? html`<p class="small muted">${t('snapFirst')}</p>`
     : changes.length ? html`<ul class="changes">${changes.map((x) => html`<li>${badge(x)}<span>${changeText(x)}</span></li>`)}</ul>`
       : html`<p class="small muted">${t('noChanges')}</p>`;
-  return html`<div class="card no-print"><div class="card-head"><h3>${t('compare')} ${tip(t('compare'), t('compareTip'))}</h3>
+  return html`<div class="card no-print"><div class="card-head sc-head"><h3>${t('compare')} ${tip(t('compare'), t('compareTip'))}</h3>
     <button type="button" class="btn xs" id="snapBtn">${I.bookmark} ${t('snapNow')}</button></div>
     <div class="card-body"><p class="tiny muted">${saved ? t('snapAt', { time: stamp(saved.at) }) : ''}</p>${body}</div></div>`;
 }
@@ -137,7 +161,7 @@ function healthCard(c) {
       <div class="ring ${h.grade === 'good' ? '' : h.grade}" style="--p: ${h.score}" role="img" aria-label="${t('scoreAria', { n: h.score })}"><b>${h.score}</b></div>
       <div><div class="bold">${t('grade.' + h.grade)} ${tip(t('health'), t('healthTip'))}</div><div class="small muted">${t('scoreOf', { n: h.score })}</div></div>
     </div>
-    ${h.why.length ? html`<ul class="why">${h.why.map((w) => html`<li><span class="dot ${w.weight >= 10 ? 'err' : 'warn'}" aria-hidden="true"></span><span>${t('why.' + w.key, { n: num(w.n) })}</span><span class="minus">−${w.weight}</span></li>`)}</ul>` : html`<p class="small muted" style="margin: var(--sp-3, 12px) 0 0">${t('allGood')}</p>`}
+    ${h.why.length ? html`<ul class="why">${h.why.map((w) => html`<li><span class="dot ${w.weight >= 10 ? 'err' : 'sc-dot-warn'}" aria-hidden="true"></span><span>${t('why.' + w.key, { n: num(w.n) })}</span><span class="minus">−${w.weight}</span></li>`)}</ul>` : html`<p class="small muted" style="margin: var(--sp-3, 12px) 0 0">${t('allGood')}</p>`}
   </div>`;
 }
 
@@ -167,7 +191,7 @@ function softwareCard(c) {
 
 function certsCard(c) {
   if (!c.certs.length) return '';
-  return html`<div class="card"><div class="card-head"><h3>${t('certs')}</h3></div><table class="table"><tbody>${c.certs.map((x) => html`<tr><td class="small" style="overflow-wrap: anywhere">${x.name}</td><td class="right"><span class="badge ${x.daysLeft == null ? 'warn' : x.daysLeft < 14 ? 'err' : x.daysLeft < 30 ? 'warn' : 'ok'}">${x.daysLeft == null ? t('certMissing') : t('daysLeft', { n: num(x.daysLeft) })}</span></td></tr>`)}</tbody></table></div>`;
+  return html`<div class="card"><div class="card-head sc-head"><h3>${t('certs')}</h3></div><table class="table"><tbody>${c.certs.map((x) => html`<tr><td class="small" style="overflow-wrap: anywhere">${x.name}</td><td class="right"><span class="badge ${x.daysLeft == null ? 'warn' : x.daysLeft < 14 ? 'err' : x.daysLeft < 30 ? 'warn' : 'ok'}">${x.daysLeft == null ? t('certMissing') : t('daysLeft', { n: num(x.daysLeft) })}</span></td></tr>`)}</tbody></table></div>`;
 }
 
 function securityCard(c) {
@@ -175,7 +199,7 @@ function securityCard(c) {
   if (!s || (!s.err && !s.warn)) return '';
   return html`<div class="card card-pad"><div class="row-tight" style="margin-bottom: var(--sp-2, 8px)"><h3 style="margin: 0; flex: 1">${t('security')}</h3>
       ${s.err ? html`<span class="badge err">${t('secErrN', { n: s.err })}</span>` : ''}${s.warn ? html`<span class="badge warn">${t('secWarnN', { n: s.warn })}</span>` : ''}</div>
-    <ul class="why" style="margin: 0">${s.items.slice(0, 6).map((x) => html`<li><span class="dot ${x.level === 'err' ? 'err' : 'warn'}" aria-hidden="true"></span><span>${x.title}</span></li>`)}</ul>
+    <ul class="why" style="margin: 0">${s.items.slice(0, 6).map((x) => html`<li><span class="dot ${x.level === 'err' ? 'err' : 'sc-dot-warn'}" aria-hidden="true"></span><span>${x.title}</span></li>`)}</ul>
     ${s.items.length > 6 ? html`<p class="tiny muted" style="margin: var(--sp-2, 8px) 0 0">${t('moreN', { n: s.items.length - 6 })}</p>` : ''}</div>`;
 }
 
@@ -189,6 +213,8 @@ function render() {
   const c = shown();
   if (!c) return;
   tipSeq = 0;
+  const typing = document.activeElement && document.activeElement.id === 'svcSearch'; // Neuladen im Hintergrund: Fokus im Suchfeld behalten
+  $('shareBtn').disabled = false;
   $('stamp').textContent = t('stamp', { time: stamp(c.at) });
   Hostwerk.render('#aboutTip', tip(t('title'), t('aboutTip')));
   Hostwerk.render('#main', html`${kpis(c)}
@@ -197,6 +223,7 @@ function render() {
       <div class="col">${healthCard(c)}${networkCard(c)}${softwareCard(c)}${certsCard(c)}${securityCard(c)}</div>
     </div>`);
   $('snapBtn').addEventListener('click', remember);
+  if (typing) { const i = $('svcSearch'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   renderName();
 }
 
@@ -219,7 +246,8 @@ function closeName(save) {
   }
   i.hidden = true; $('nameBtn').hidden = false; renderName(); $('nameBtn').focus();
 }
-$('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') closeName(true); else if (e.key === 'Escape') closeName(false); });
+// preventDefault: sonst löst dasselbe Enter auf dem gleich fokussierten Stift-Knopf einen Klick aus und das Feld geht wieder auf
+$('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); closeName(true); } else if (e.key === 'Escape') { e.preventDefault(); closeName(false); } });
 $('nameInput').addEventListener('blur', () => closeName(true));
 
 // ——— Vergleich ———
@@ -293,7 +321,11 @@ $('shareMenu').addEventListener('click', (e) => {
   if (act === 'print') printCard(); else share(act);
 });
 $('rowMenu').addEventListener('keydown', menuKeys);
-document.addEventListener('mousedown', (e) => { if (menuOpen && !menuOpen.el.contains(e.target) && !(menuOpen.back && menuOpen.back.contains(e.target))) closeMenu(false); });
+document.addEventListener('mousedown', (e) => {
+  if (menuOpen && !menuOpen.el.contains(e.target) && !(menuOpen.back && menuOpen.back.contains(e.target))) closeMenu(false);
+  // Geöffnete ⓘ-Erklärungen schließen bei Klick daneben (wie Hostwerks InfoTip)
+  for (const x of document.querySelectorAll('.info-tip.open')) if (!x.contains(e.target)) x.classList.remove('open');
+});
 
 // Rechtsklick auf einen Dienst: öffnen oder Werte kopieren (Tastatur: Kontextmenü-Taste bzw. Umschalt+F10 auf dem Namen)
 const svcAt = (i) => C.flat((shown() || {}).groups)[Number(i)];
@@ -341,5 +373,5 @@ Hostwerk.ready().then(async () => {
   renderName();
   load(true);
   Hostwerk.on('service', () => load());
-  Hostwerk.on('lang', () => { statics(); render(); });
+  Hostwerk.on('lang', () => { if (card) card.security = C.security(extras.security, Hostwerk.lang); statics(); render(); });
 });
